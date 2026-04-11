@@ -1226,7 +1226,35 @@ window.salvarCat=async function(){
 };
 window.delCat=async function(id){if(confirm('Remover?')){await dl(['categorias'],id);toast('Removida.')}};
 
-// ── FLUXO PAINEL ──
+// Abre painel direto por categoria (sem depender de grupo)
+window.abrirPainelCategoria=function(cat){
+  const mk=mesKey();
+  const txs=txsCache.filter(t=>t.cat===cat&&t.val<0);
+  const mesLabel=mesAtual.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('fpTitle').textContent=`${catIco(cat)} ${cat} — ${mesLabel[0].toUpperCase()+mesLabel.slice(1)}`;
+  const total=txs.reduce((s,t)=>s+Math.abs(t.val),0);
+  let html=`<div style="font-size:15px;font-weight:700;color:var(--rd);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--bd)">Total: ${fmt(total)}</div>`;
+  if(!txs.length){html+='<div class="empty"><div class="ei">📋</div>Nenhum lançamento</div>'}
+  else{
+    html+='<div style="display:flex;flex-direction:column;gap:6px">';
+    txs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(t=>{
+      const cc=t.cartao?ccCache.find(c=>c.id===t.cartao):null;
+      const prev=(t.status||'realizado')==='previsto';
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:var(--s2);border:1px solid var(--bd)">
+        <div style="width:30px;height:30px;border-radius:8px;background:${catCor(t.cat)}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${catIco(t.cat)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.desc}</div>
+          <div style="font-size:11px;color:var(--t3)">${cc?'💳 '+cc.nome+' · ':''}${new Date(t.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}${prev?' <span class="pill p-prev">previsto</span>':''}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--rd)">-${fmt(t.val)}</div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  document.getElementById('fpBody').innerHTML=html;
+  document.getElementById('fluxoPanel').classList.add('open');
+  document.getElementById('fpOv').classList.add('open');
+};
 window.fecharPainel=function(){
   document.getElementById('fluxoPanel').classList.remove('open');
   document.getElementById('fpOv').classList.remove('open');
@@ -1300,7 +1328,7 @@ function renderDashboard(){
   document.getElementById('kSs').textContent=S>=0?'✓ Saldo positivo':'⚠ Saldo negativo';
   // Barras de categoria — clicáveis
   const por={};const porQ={};
-  txsCache.filter(t=>t.val<0&&t.tipo!=='i').forEach(t=>{por[t.cat]=(por[t.cat]||0)+Math.abs(t.val);porQ[t.cat]=(porQ[t.cat]||0)+1});
+  txsCache.filter(t=>t.val<0&&t.tipo!=='i'&&catTipo(t.cat)!=='caixinha'&&catTipo(t.cat)!=='investimento').forEach(t=>{por[t.cat]=(por[t.cat]||0)+Math.abs(t.val);porQ[t.cat]=(porQ[t.cat]||0)+1});
   const catEl=document.getElementById('catBars');
   if(!Object.keys(por).length){catEl.innerHTML='<div class="empty"><div class="ei">📊</div>Sem despesas</div>'}
   else{
@@ -1308,10 +1336,7 @@ function renderDashboard(){
     const max=Math.max(...Object.values(por));
     catEl.innerHTML=Object.entries(por).sort((a,b)=>b[1]-a[1]).map(([c,v])=>{
       const pct=totD>0?Math.round(v/totD*100):0;
-      // Determina grupo da categoria para abrir painel correto
-      const grpId=txsCache.find(t=>t.cat===c&&t.val<0)?.cartao?'cartao':
-                  txsCache.find(t=>t.cat===c&&t.val<0&&t.recorrenteId)?'fixos':'variaveis';
-      return`<div style="margin-bottom:11px;cursor:pointer;border-radius:9px;padding:6px 8px;transition:background .15s" onclick="abrirPainelCat('${grpId}','${c}','${mesKey()}')" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background='transparent'">
+      return`<div style="margin-bottom:11px;cursor:pointer;border-radius:9px;padding:6px 8px;transition:background .15s" onclick="abrirPainelCategoria('${c}')" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background='transparent'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px">${catIco(c)}</span><span style="font-size:13px;font-weight:600">${c}</span><span style="font-size:10px;color:var(--t3)">${porQ[c]} lanç.</span></div>
           <div style="display:flex;align-items:center;gap:7px"><span style="font-size:12px;font-weight:600">${fmt(v)}</span><span style="background:${catCor(c)}22;color:${catCor(c)};font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px">${pct}%</span><span style="font-size:11px;color:var(--t3)">›</span></div>
