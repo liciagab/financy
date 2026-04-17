@@ -1088,17 +1088,34 @@ window.addTx=async function(mais=false){
   if(tipoAtual==='p'){
     const n=parseInt(document.getElementById('fParcelas').value)||0;
     if(n<2){toast('Mínimo 2 parcelas');return}
-    const base=new Date(data+'T12:00:00');
+    const ts=Date.now();
+    const cc=cartao?ccCache.find(c=>c.id===cartao):null;
+    // Calcula vencimento da primeira parcela
+    const venc1=vencFatura||calcVencFatura(data,cc)||data;
+    const venc1Date=new Date(venc1+'T12:00:00');
     for(let i=0;i<n;i++){
-      const d=new Date(base);d.setMonth(d.getMonth()+i);
-      const ds=d.toISOString().split('T')[0];
-      const mk=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
-      const id=Date.now().toString()+'_'+i;
-      const cc=cartao?ccCache.find(c=>c.id===cartao):null;
-      const vp=cc?calcVencFatura(ds,cc):null;
-      await setDoc(doc(db,'users',uid,'meses',mk,'txs',id),{id,desc:`${desc} (${i+1}/${n})`,val:-val/n,data:ds,cat,tipo:'p',cartao,vencFatura:vp,status,ts:Date.now()+i});
+      // Data da compra = sempre a mesma (data informada)
+      // Vencimento avança mês a mês a partir do venc da 1ª parcela
+      const vd=new Date(venc1Date.getFullYear(),venc1Date.getMonth()+i,venc1Date.getDate());
+      const vp=vd.toISOString().split('T')[0];
+      // Mês do lançamento = mês do vencimento da parcela
+      const mk=vd.getFullYear()+'-'+(vd.getMonth()+1).toString().padStart(2,'0');
+      const id=ts.toString()+'_'+i;
+      const valParcela=parseFloat((val/n).toFixed(2));
+      await setDoc(doc(db,'users',uid,'meses',mk,'txs',id),{
+        id,
+        desc:`${desc} (${i+1}/${n})`,
+        val:-valParcela,
+        data, // data da compra sempre igual
+        cat,
+        tipo:'p',
+        cartao,
+        vencFatura:vp,
+        status:i===0?status:'previsto', // só a 1ª pode ser realizada, demais previstas
+        ts:ts+i
+      });
     }
-    toast(`${n} parcelas registradas!`);
+    toast(`${n} parcelas registradas! Parcela 1 em ${new Date(venc1+'T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}`);
   }else{
     const id=Date.now().toString();
     await svTx({id,desc,val:tipoAtual==='r'?val:-val,data,cat,tipo:tipoAtual==='r'?'r':tipoAtual==='i'?'i':'d',cartao,vencFatura,status,ts:Date.now()});
