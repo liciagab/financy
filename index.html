@@ -177,6 +177,25 @@ textarea{height:auto;padding:10px 12px;resize:vertical}
 .fp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:49;display:none}
 .fp-overlay.open{display:block}
 /* CARTÕES */
+/* MODO PRIVACIDADE */
+.priv-val{transition:filter .25s}
+body.privado .priv-val{filter:blur(7px);pointer-events:none}
+#privBtn.ativo,#privBtnM.ativo{background:var(--ac-l)!important;color:var(--ac)!important}
+/* FATURA CARD EXPANSÍVEL */
+.fat-card{background:var(--surface);border-radius:var(--r);border:1px solid var(--bd);box-shadow:var(--sh);margin-bottom:.75rem;overflow:hidden}
+.fat-hdr{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.1rem;cursor:pointer;transition:background .15s;user-select:none}
+.fat-hdr:hover{background:var(--s2)}
+.fat-body{display:none;border-top:1px solid var(--bd);padding:.5rem .75rem .75rem}
+.fat-body.open{display:block}
+.fat-chev{font-size:10px;color:var(--t3);transition:transform .25s;margin-left:6px}
+.fat-chev.open{transform:rotate(90deg)}
+/* SEPARADOR DE DATA NAS TX */
+.tx-date-sep{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;padding:.6rem .25rem .2rem;margin-top:.2rem}
+/* BADGE ONDE FOI */
+.onde{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:100px;font-size:10px;font-weight:700}
+.onde.cartao{background:var(--bl-l);color:#1e40af}
+.onde.deb{background:var(--s3);color:var(--t2)}
+.onde.rec{background:var(--pu-l);color:var(--pu)}
 .cc-card{border-radius:var(--r);padding:1.1rem 1.25rem;color:#fff;position:relative;overflow:hidden;min-height:110px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .15s;cursor:pointer}
 .cc-card:hover{transform:translateY(-2px)}
 .cc-card::before{content:'';position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.1)}
@@ -321,6 +340,7 @@ textarea{height:auto;padding:10px 12px;resize:vertical}
     <div class="mob-hdr" id="mobHdr">
       <div class="mob-logo">💰 Financy</div>
       <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn sm ghost" id="privBtnM" onclick="togglePriv()" title="Modo privacidade" style="font-size:16px;padding:0 8px">👁</button>
         <button class="btn sm ghost" onclick="abrirModal()">+ Lançar</button>
         <img class="sb-av" id="sbAvM" src="" style="display:none;cursor:pointer" onclick="logout()"/>
       </div>
@@ -331,6 +351,7 @@ textarea{height:auto;padding:10px 12px;resize:vertical}
       <div class="ph">
         <div><div class="ph-title">Dashboard</div><div class="ph-sub" id="dashSub">—</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn sm ghost" id="privBtn" onclick="togglePriv()" title="Modo privacidade" style="font-size:16px;padding:0 10px;height:34px">👁</button>
           <div class="period-nav">
             <button class="pn-btn" onclick="mudaMes(-1)">‹</button>
             <div class="pn-lbl" id="mesLabel">—</div>
@@ -341,28 +362,28 @@ textarea{height:auto;padding:10px 12px;resize:vertical}
           <button class="btn primary" onclick="abrirModal()">+ Lançamento</button>
         </div>
       </div>
+      <!-- KPIs -->
       <div class="kpi-grid gap">
-        <div class="kpi gr"><div class="kpi-icon gr">💚</div><div class="kpi-lbl">Receitas</div><div class="kpi-val gr" id="kR">R$ 0</div><div class="kpi-sub" id="kRs">—</div></div>
-        <div class="kpi rd"><div class="kpi-icon rd">🔴</div><div class="kpi-lbl">Despesas</div><div class="kpi-val rd" id="kD">R$ 0</div><div class="kpi-sub" id="kDs">—</div></div>
-        <div class="kpi ac"><div class="kpi-icon ac">⚡</div><div class="kpi-lbl">Saldo</div><div class="kpi-val ac" id="kS">R$ 0</div><div class="kpi-sub" id="kSs">—</div></div>
-        <div class="kpi bl"><div class="kpi-icon bl">📈</div><div class="kpi-lbl">Investido</div><div class="kpi-val bl" id="kI">R$ 0</div><div class="kpi-sub">no mês</div></div>
+        <div class="kpi gr"><div class="kpi-icon gr">💚</div><div class="kpi-lbl">Receitas</div><div class="kpi-val gr priv-val" id="kR">R$ 0</div></div>
+        <div class="kpi rd"><div class="kpi-icon rd">🔴</div><div class="kpi-lbl">Despesas</div><div class="kpi-val rd priv-val" id="kD">R$ 0</div></div>
+        <div class="kpi ac"><div class="kpi-icon ac">⚡</div><div class="kpi-lbl">Saldo livre</div><div class="kpi-val ac priv-val" id="kS">R$ 0</div></div>
+        <div class="kpi bl"><div class="kpi-icon bl">📈</div><div class="kpi-lbl">Guardado</div><div class="kpi-val bl priv-val" id="kI">R$ 0</div></div>
       </div>
-      <!-- INSIGHTS -->
-      <div class="ins-card gap">
-        <div class="ins-hdr"><div class="ins-title">✨ Insights</div><button class="ins-btn" onclick="gerarInsights()">Analisar</button></div>
-        <div class="ins-body" id="insBody">Clique em "Analisar" para gerar insights do mês.</div>
-      </div>
-      <!-- ANÁLISE - TUDO VISÍVEL -->
+      <!-- DESPESAS POR CATEGORIA -->
       <div class="card gap">
-        <div class="ctitle">Despesas por categoria</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <div class="ctitle" style="margin:0">Despesas por categoria</div>
+          <span style="font-size:11px;color:var(--t3)">clique para detalhar</span>
+        </div>
         <div id="catBars"></div>
       </div>
+      <!-- ROSCA + EVOLUÇÃO -->
       <div class="g2 gap">
         <div class="card">
-          <div class="ctitle">Distribuição do mês</div>
+          <div class="ctitle">Distribuição</div>
           <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
-            <div style="flex:0 0 160px;height:160px;position:relative"><canvas id="chartRos"></canvas></div>
-            <div id="rosLegend" style="flex:1;min-width:120px;font-size:13px;display:flex;flex-direction:column;gap:8px"></div>
+            <div style="flex:0 0 140px;height:140px;position:relative"><canvas id="chartRos"></canvas></div>
+            <div id="rosLegend" style="flex:1;min-width:100px;display:flex;flex-direction:column;gap:7px"></div>
           </div>
         </div>
         <div class="card">
@@ -374,7 +395,7 @@ textarea{height:auto;padding:10px 12px;resize:vertical}
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem">
           <div class="ctitle" style="margin:0">Últimos lançamentos</div>
-          <button class="btn sm" onclick="goPage('transacoes')">Ver todos</button>
+          <button class="btn sm" onclick="goPage('transacoes')">Ver todos →</button>
         </div>
         <div class="tx-list" id="txDash"></div>
       </div>
@@ -467,11 +488,11 @@ textarea{height:auto;padding:10px 12px;resize:vertical}
     <!-- CARTÕES -->
     <div class="page" id="page-cartoes">
       <div class="ph">
-        <div><div class="ph-title">Cartões</div><div class="ph-sub">Faturas e limites</div></div>
+        <div><div class="ph-title">Cartões</div><div class="ph-sub" id="mesLabelCC">—</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <div class="period-nav">
             <button class="pn-btn" onclick="mudaMes(-1)">‹</button>
-            <div class="pn-lbl" id="mesLabelCC">—</div>
+            <div class="pn-lbl" id="mesLabelCCNav">—</div>
             <button class="pn-btn" onclick="mudaMes(1)">›</button>
           </div>
           <select id="selAnoCC" style="height:34px;font-size:12px;padding:0 10px;border-radius:9px;width:80px" onchange="mudaAno(this.value)"></select>
@@ -480,14 +501,10 @@ textarea{height:auto;padding:10px 12px;resize:vertical}
           <button class="btn" onclick="abrirModalCC()">+ Cartão</button>
         </div>
       </div>
+      <!-- Cards dos cartões -->
       <div class="g2 gap" id="ccGrid"></div>
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;flex-wrap:wrap;gap:.5rem">
-          <div class="ctitle" style="margin:0">Lançamentos por fatura</div>
-          <select id="fFCC" style="height:30px;font-size:12px;padding:0 10px;border-radius:9px;width:160px" onchange="renderCCTxs()"><option value="">Todos os cartões</option></select>
-        </div>
-        <div class="tx-list" id="ccTxs"></div>
-      </div>
+      <!-- Faturas por cartão -->
+      <div id="ccFaturas"></div>
     </div>
 
     <!-- INVESTIMENTOS -->
@@ -873,6 +890,7 @@ window.goPage=function(p){
   if(p==='dashboard'){renderDashboard();renderRosca();renderEv();}
   if(p==='fluxo')renderFluxo();
   if(p==='transacoes'){atualizarSelects();renderTxs()}
+  if(p==='cartoes'){renderCC();renderCCFaturas();}
   if(p==='recorrentes')renderRecorrentes();
   if(p==='config'){atualizarSelects();renderCats()}
 };
@@ -905,7 +923,7 @@ function renderMesLabels(){
   popularSelects();
   const s=mesAtual.toLocaleString('pt-BR',{month:'long',year:'numeric'});
   const l=s[0].toUpperCase()+s.slice(1);
-  ['mesLabel','mesLabelTx','mesLabelCC','mesLabelMeta','mesLabelFluxo'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=l});
+  ['mesLabel','mesLabelTx','mesLabelCC','mesLabelCCNav','mesLabelMeta','mesLabelFluxo'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=l});
   if(document.getElementById('dashSub'))document.getElementById('dashSub').textContent='Resumo de '+l;
 }
 
@@ -1098,6 +1116,80 @@ window.delTx=async function(id){if(confirm('Remover?')){await dlTx(id);toast('Re
 window.confirmarTx=async function(id){
   const tx=txsCache.find(t=>t.id===id);if(!tx)return;
   await svTx({...tx,status:'realizado'});toast('✅ Confirmado!');
+};
+
+// ── MODO PRIVACIDADE ──
+let privado=false;
+window.togglePriv=function(){
+  privado=!privado;
+  document.body.classList.toggle('privado',privado);
+  ['privBtn','privBtnM'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.classList.toggle('ativo',privado);el.textContent=privado?'🙈':'👁'}
+  });
+};
+
+// ── FATURAS DE CARTÃO (cards expansíveis) ──
+window.renderCCFaturas=function(){
+  const el=document.getElementById('ccFaturas');
+  if(!el)return;
+  if(!ccCache.length){el.innerHTML='';return}
+  let html='';
+  ccCache.forEach(cc=>{
+    const txsCC=txsCache.filter(t=>t.cartao===cc.id&&t.val<0);
+    if(!txsCC.length)return;
+    const faturas={};
+    txsCC.forEach(t=>{
+      let fk=mesKey();
+      if(t.vencFatura)fk=t.vencFatura.substring(0,7);
+      else if(cc.fecha){
+        const d=new Date(t.data+'T12:00:00');
+        const ref=d.getDate()>cc.fecha?new Date(d.getFullYear(),d.getMonth()+1,1):new Date(d.getFullYear(),d.getMonth(),1);
+        fk=ref.getFullYear()+'-'+(ref.getMonth()+1).toString().padStart(2,'0');
+      }
+      if(!faturas[fk])faturas[fk]=[];
+      faturas[fk].push(t);
+    });
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin:.75rem 0 .4rem .25rem">💳 ${cc.nome}</div>`;
+    Object.keys(faturas).sort((a,b)=>b.localeCompare(a)).forEach(fk=>{
+      const txsF=faturas[fk];
+      const total=txsF.reduce((s,t)=>s+Math.abs(t.val),0);
+      const [y,m]=fk.split('-');
+      const label=new Date(parseInt(y),parseInt(m)-1,1).toLocaleString('pt-BR',{month:'long',year:'numeric'});
+      const labelCap=label[0].toUpperCase()+label.slice(1);
+      const venc=txsF.find(t=>t.vencFatura)?.vencFatura;
+      const vencLabel=venc?new Date(venc+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';
+      const fatId=`fat_${cc.id}_${fk}`.replace(/[^a-z0-9_]/gi,'_');
+      html+=`<div class="fat-card">
+        <div class="fat-hdr" onclick="toggleFat('${fatId}')">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6366f1;flex-shrink:0"></div>
+            <div>
+              <div style="font-size:13px;font-weight:700">Fatura ${labelCap}</div>
+              <div style="font-size:11px;color:var(--t3)">${txsF.length} lançamento${txsF.length!==1?'s':''}${vencLabel?' · vence '+vencLabel:''}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span class="priv-val" style="font-size:14px;font-weight:700;color:var(--rd)">-${fmt(total)}</span>
+            <span class="fat-chev" id="chev_${fatId}">▶</span>
+          </div>
+        </div>
+        <div class="fat-body" id="body_${fatId}">
+          <div class="tx-list" style="gap:4px;padding-top:4px">
+            ${txsF.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(t=>txHTML(t)).join('')}
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML=html||'<div class="empty"><div class="ei">💳</div>Nenhum lançamento neste mês</div>';
+};
+window.toggleFat=function(id){
+  const body=document.getElementById('body_'+id);
+  const chev=document.getElementById('chev_'+id);
+  if(!body)return;
+  const open=body.classList.toggle('open');
+  if(chev)chev.classList.toggle('open',open);
 };
 
 // ── CARTÕES ──
@@ -1302,7 +1394,7 @@ function renderAll(){
   renderDashboard();
   renderTxs();
   renderCC();
-  renderCCTxs();
+  renderCCFaturas();
   renderInvest();
   renderMetas();
   if(paginaAtual==='fluxo')renderFluxo();
@@ -1381,7 +1473,7 @@ function renderRosca(){
   const total=D+I+S;
   leg.innerHTML=labels.map((l,i)=>{
     const pct=total>0?Math.round(data[i]/total*100):0;
-    return`<div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0"></div><div><div style="font-size:13px;font-weight:600">${l}</div><div style="font-size:11px;color:var(--t3)">${fmt(data[i])} · ${pct}%</div></div></div>`;
+    return`<div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0"></div><div><div style="font-size:13px;font-weight:600">${l}</div><div class="priv-val" style="font-size:11px;color:var(--t3)">${fmt(data[i])} · ${pct}%</div></div></div>`;
   }).join('');
 }
 
@@ -1437,26 +1529,50 @@ window.gerarInsights=async function(){
 
 // ── TX HTML ──
 function txHTML(t){
-  const prev=t.status==='previsto';
-  const vc=t.val>0?'pos':t.tipo==='i'?'inv':prev?'prv':'neg';
+  const prev=(t.status||'realizado')==='previsto';
+  const vc=t.val>0?'pos':catTipo(t.cat)==='investimento'||catTipo(t.cat)==='caixinha'?'inv':prev?'prv':'neg';
   const sinal=t.val>0?'+':'-';
   const cc=t.cartao?ccCache.find(c=>c.id===t.cartao):null;
-  const fatura=cc&&t.data?calcFatura(t.data,cc):null;
-  const fat=fatura?fatura[0].toUpperCase()+fatura.slice(1):'';
-  const pills=[
-    prev?`<span class="pill p-prev">previsto</span>`:`<span class="pill p-real">realizado</span>`,
-    t.recorrenteId?`<span class="pill" style="background:var(--pu-l);color:var(--pu)">🔁 fixo</span>`:'',
-    cc?`<span class="pill p-card">💳 ${cc.nome}</span>`:'',
-    fat?`<span class="pill" style="background:#fef9c3;color:#854d0e">📅 ${fat}</span>`:'',
-    t.tipo==='p'?`<span class="pill p-par">parcelado</span>`:'',
-  ].filter(Boolean).join('');
   return`<div class="tx-item">
     <div class="tx-ico" style="background:${catCor(t.cat)}22">${catIco(t.cat)}</div>
     <div class="tx-info">
       <div class="tx-desc">${t.desc}</div>
-      <div class="tx-meta">${t.cat} · ${new Date(t.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} ${pills}</div>
+      <div class="tx-meta">${t.cat}${cc?' · 💳 '+cc.nome:''}${t.recorrenteId?' · 🔁':''} ${prev?'<span class="pill p-prev">previsto</span>':'<span class="pill p-real">realizado</span>'}</div>
     </div>
-    <div class="tx-val ${vc}">${sinal}${fmt(t.val)}</div>
+    <div class="tx-val ${vc} priv-val">${sinal}${fmt(t.val)}</div>
+    <div class="tx-acts">
+      ${prev&&t.val<0?`<button class="tx-act ok" onclick="confirmarTx('${t.id}')" title="Confirmar">✓</button>`:''}
+      <button class="tx-act" onclick="editarTx('${t.id}')" style="color:var(--ac)">✏️</button>
+      <button class="tx-act del" onclick="delTx('${t.id}')">✕</button>
+    </div>
+  </div>`;
+}
+
+// txHTMLFull — versão da tela de transações com badge "onde foi"
+function txHTMLFull(t){
+  const prev=(t.status||'realizado')==='previsto';
+  const vc=t.val>0?'pos':catTipo(t.cat)==='investimento'||catTipo(t.cat)==='caixinha'?'inv':prev?'prv':'neg';
+  const sinal=t.val>0?'+':'-';
+  const cc=t.cartao?ccCache.find(c=>c.id===t.cartao):null;
+  const fatura=cc&&t.data?calcFatura(t.data,cc):null;
+  const fatLabel=fatura?fatura[0].toUpperCase()+fatura.slice(1):'';
+  // Badge "onde foi"
+  let ondeBadge='';
+  if(cc){
+    ondeBadge=`<span class="onde cartao">💳 ${cc.nome}${fatLabel?' · '+fatLabel:''}</span>`;
+  }else if(t.recorrenteId){
+    ondeBadge=`<span class="onde rec">🔁 Fixo</span>`;
+  }else{
+    ondeBadge=`<span class="onde deb">Déb/Pix</span>`;
+  }
+  const parLabel=t.tipo==='p'?`<span class="pill p-par">parcelado</span>`:'';
+  return`<div class="tx-item">
+    <div class="tx-ico" style="background:${catCor(t.cat)}22">${catIco(t.cat)}</div>
+    <div class="tx-info">
+      <div class="tx-desc">${t.desc}</div>
+      <div class="tx-meta">${t.cat} · ${ondeBadge} ${parLabel} ${prev?'<span class="pill p-prev">previsto</span>':'<span class="pill p-real">realizado</span>'}</div>
+    </div>
+    <div class="tx-val ${vc} priv-val">${sinal}${fmt(t.val)}</div>
     <div class="tx-acts">
       ${prev&&t.val<0?`<button class="tx-act ok" onclick="confirmarTx('${t.id}')" title="Confirmar">✓</button>`:''}
       <button class="tx-act" onclick="editarTx('${t.id}')" style="color:var(--ac)">✏️</button>
@@ -1479,10 +1595,10 @@ window.renderTxs=function renderTxs(){
   let txs=[...txsCache];
   if(busca)  txs=txs.filter(t=>(t.desc||'').toLowerCase().includes(busca));
   if(catF)   txs=txs.filter(t=>t.cat===catF);
-  if(tipoF==='receita')    txs=txs.filter(t=>t.val>0);
-  else if(tipoF==='despesa')    txs=txs.filter(t=>t.val<0&&t.tipo!=='i'&&t.tipo!=='p');
-  else if(tipoF==='investimento')txs=txs.filter(t=>t.tipo==='i');
-  else if(tipoF==='parcelado')   txs=txs.filter(t=>t.tipo==='p');
+  if(tipoF==='receita')      txs=txs.filter(t=>t.val>0);
+  else if(tipoF==='despesa') txs=txs.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha');
+  else if(tipoF==='investimento')txs=txs.filter(t=>catTipo(t.cat)==='investimento'||catTipo(t.cat)==='caixinha');
+  else if(tipoF==='parcelado')txs=txs.filter(t=>t.tipo==='p');
   if(stF)    txs=txs.filter(t=>(t.status||'realizado')===stF);
   if(ccF)    txs=txs.filter(t=>t.cartao===ccF);
   if(min>0)        txs=txs.filter(t=>Math.abs(t.val)>=min);
@@ -1497,14 +1613,43 @@ window.renderTxs=function renderTxs(){
     return(b.data||'').localeCompare(a.data||'');
   });
 
-  const tot=txs.reduce((s,t)=>({r:s.r+(t.val>0?t.val:0),d:s.d+(t.val<0&&t.tipo!=='i'?Math.abs(t.val):0)}),{r:0,d:0});
+  const tot=txs.reduce((s,t)=>({r:s.r+(t.val>0?t.val:0),d:s.d+(t.val<0?Math.abs(t.val):0)}),{r:0,d:0});
   const sub=document.getElementById('txSub');
   if(sub)sub.textContent=`${txs.length} lançamento${txs.length!==1?'s':''} · Rec. ${fmt(tot.r)} · Desp. ${fmt(tot.d)}`;
   const cnt=document.getElementById('txCnt');
   if(cnt)cnt.textContent=`${txs.length} resultado${txs.length!==1?'s':''}`;
 
   const el=document.getElementById('txList');
-  if(el)el.innerHTML=txs.map(t=>txHTML(t)).join('')||'<div class="empty"><div class="ei">🔍</div>Nenhuma transação com esses filtros</div>';
+  if(!el)return;
+  if(!txs.length){el.innerHTML='<div class="empty"><div class="ei">🔍</div>Nenhuma transação com esses filtros</div>';return}
+
+  if(ordem==='data_desc'||ordem==='data_asc'){
+    const grupos={};
+    txs.forEach(t=>{const dk=t.data||'sem-data';if(!grupos[dk])grupos[dk]=[];grupos[dk].push(t)});
+    const hoje=new Date().toISOString().split('T')[0];
+    const ontem=new Date(Date.now()-86400000).toISOString().split('T')[0];
+    let html='';
+    Object.keys(grupos).sort((a,b)=>ordem==='data_asc'?a.localeCompare(b):b.localeCompare(a)).forEach(dk=>{
+      const subtotal=grupos[dk].reduce((s,t)=>s+t.val,0);
+      let label='';
+      if(dk==='sem-data')label='Sem data';
+      else{
+        const d=new Date(dk+'T12:00:00');
+        label=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
+        if(dk===hoje)label='Hoje · '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'});
+        else if(dk===ontem)label='Ontem · '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'});
+        label=label[0].toUpperCase()+label.slice(1);
+      }
+      html+=`<div class="tx-date-sep" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${label}</span>
+        <span class="priv-val" style="font-size:11px;font-weight:700;color:${subtotal>=0?'var(--gr)':'var(--rd)'}">${subtotal>=0?'+':''}${fmt(subtotal)}</span>
+      </div>`;
+      html+=grupos[dk].map(t=>txHTMLFull(t)).join('');
+    });
+    el.innerHTML=html;
+  }else{
+    el.innerHTML=txs.map(t=>txHTMLFull(t)).join('');
+  }
 };
 window.limparFiltros=function(){
   ['fBusca','fFMin','fFMax'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
@@ -1526,9 +1671,9 @@ function renderCC(){
     const hoje=new Date();const dh=hoje.getDate();
     const dtf=cc.fecha?(cc.fecha>=dh?cc.fecha-dh:30-dh+cc.fecha):null;
     const alerta=dtf!==null&&dtf<=3?`<div style="background:rgba(255,255,255,.2);border-radius:7px;padding:2px 8px;font-size:10px;font-weight:700;margin-top:4px;position:relative;z-index:1">⚠️ Fecha ${dtf===0?'hoje':'em '+dtf+' dia'+(dtf>1?'s':'')}</div>`:'';
-    return`<div class="cc-card" style="background:${cc.cor}" onclick="document.getElementById('fFCC').value='${cc.id}';renderCCTxs()">
+    return`<div class="cc-card" style="background:${cc.cor}">
       <div><div class="cc-name">${cc.nome}</div><div class="cc-info">${cc.limite?'Limite '+fmt(cc.limite):'Sem limite'} · Fecha dia ${cc.fecha||'?'} · Vence dia ${cc.venc||'?'}</div>${alerta}</div>
-      <div><div class="cc-uso">${fmt(g)}</div>${cc.limite?`<div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div><div style="font-size:10px;opacity:.7;margin-top:2px;position:relative;z-index:1">${pct}% do limite</div>`:''}<div style="margin-top:.5rem;position:relative;z-index:1"><button onclick="event.stopPropagation();delCC('${cc.id}')" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;cursor:pointer;font-family:var(--fn)">Remover</button></div></div>
+      <div><div class="cc-uso priv-val">${fmt(g)}</div>${cc.limite?`<div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div><div style="font-size:10px;opacity:.7;margin-top:2px;position:relative;z-index:1">${pct}% do limite</div>`:''}<div style="margin-top:.5rem;position:relative;z-index:1"><button onclick="event.stopPropagation();delCC('${cc.id}')" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;cursor:pointer;font-family:var(--fn)">Remover</button></div></div>
     </div>`;
   }).join('');
 }
