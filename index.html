@@ -1426,15 +1426,13 @@ function renderDashboard(){
   const D=txsCache.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
   const I=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='investimento').reduce((s,t)=>s+Math.abs(t.val),0);
   const CX=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
-  const S=R-D-I-CX; // saldo = receita - despesa - investido - caixinha
-  document.getElementById('kR').textContent=fmt(R);
-  document.getElementById('kD').textContent=fmt(D);
-  document.getElementById('kS').textContent=(S>=0?'':'-')+fmt(S);
-  document.getElementById('kS').className='kpi-val '+(S>=0?'gr':'rd');
-  document.getElementById('kI').textContent=fmt(I+CX);
-  document.getElementById('kRs').textContent=txsCache.filter(t=>t.val>0).length+' lançamentos';
-  document.getElementById('kDs').textContent=txsCache.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha').length+' lançamentos';
-  document.getElementById('kSs').textContent=S>=0?'✓ Saldo positivo':'⚠ Saldo negativo';
+  const S=R-D-I-CX;
+  const setEl=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val};
+  setEl('kR',fmt(R));
+  setEl('kD',fmt(D));
+  const kS=document.getElementById('kS');
+  if(kS){kS.textContent=(S>=0?'':'-')+fmt(S);kS.className='kpi-val '+(S>=0?'gr':'rd')+' priv-val';}
+  setEl('kI',fmt(I+CX));
   // Barras de categoria — clicáveis
   const por={};const porQ={};
   txsCache.filter(t=>t.val<0&&t.tipo!=='i'&&catTipo(t.cat)!=='caixinha'&&catTipo(t.cat)!=='investimento').forEach(t=>{por[t.cat]=(por[t.cat]||0)+Math.abs(t.val);porQ[t.cat]=(porQ[t.cat]||0)+1});
@@ -1679,18 +1677,46 @@ window.limparFiltros=function(){
 function renderCC(){
   const grid=document.getElementById('ccGrid');if(!grid)return;
   if(!ccCache.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">💳</div>Nenhum cartão</div>';return}
-  const gpc={};txsCache.filter(t=>t.cartao&&t.val<0).forEach(t=>gpc[t.cartao]=(gpc[t.cartao]||0)+Math.abs(t.val));
-  // Atualiza select filtro
-  const fs=document.getElementById('fFCC');
-  if(fs){fs.innerHTML='<option value="">Todos os cartões</option>';ccCache.forEach(c=>fs.innerHTML+=`<option value="${c.id}">${c.nome}</option>`)}
+  const mk=mesKey();
+  // Calcula gasto por cartão SOMENTE da fatura do mês filtrado
+  // Uma transação pertence à fatura de um mês pelo seu vencFatura
+  const gpc={};
+  txsCache.filter(t=>t.cartao&&t.val<0).forEach(t=>{
+    // Determina a qual fatura pertence
+    let fatMk=mk;
+    if(t.vencFatura){
+      fatMk=t.vencFatura.substring(0,7);
+    }else{
+      const cc=ccCache.find(c=>c.id===t.cartao);
+      if(cc?.fecha&&t.data){
+        const d=new Date(t.data+'T12:00:00');
+        const ref=d.getDate()>cc.fecha?new Date(d.getFullYear(),d.getMonth()+1,1):new Date(d.getFullYear(),d.getMonth(),1);
+        fatMk=ref.getFullYear()+'-'+(ref.getMonth()+1).toString().padStart(2,'0');
+      }
+    }
+    // Só conta se a fatura é do mês atual filtrado
+    if(fatMk===mk) gpc[t.cartao]=(gpc[t.cartao]||0)+Math.abs(t.val);
+  });
   grid.innerHTML=ccCache.map(cc=>{
-    const g=gpc[cc.id]||0;const pct=cc.limite?Math.min(Math.round(g/cc.limite*100),100):0;
+    const g=gpc[cc.id]||0;
+    const pct=cc.limite?Math.min(Math.round(g/cc.limite*100),100):0;
     const hoje=new Date();const dh=hoje.getDate();
     const dtf=cc.fecha?(cc.fecha>=dh?cc.fecha-dh:30-dh+cc.fecha):null;
     const alerta=dtf!==null&&dtf<=3?`<div style="background:rgba(255,255,255,.2);border-radius:7px;padding:2px 8px;font-size:10px;font-weight:700;margin-top:4px;position:relative;z-index:1">⚠️ Fecha ${dtf===0?'hoje':'em '+dtf+' dia'+(dtf>1?'s':'')}</div>`:'';
+    const mesLabel=new Date(mk+'-15').toLocaleString('pt-BR',{month:'long',year:'numeric'});
     return`<div class="cc-card" style="background:${cc.cor}">
-      <div><div class="cc-name">${cc.nome}</div><div class="cc-info">${cc.limite?'Limite '+fmt(cc.limite):'Sem limite'} · Fecha dia ${cc.fecha||'?'} · Vence dia ${cc.venc||'?'}</div>${alerta}</div>
-      <div><div class="cc-uso priv-val">${fmt(g)}</div>${cc.limite?`<div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div><div style="font-size:10px;opacity:.7;margin-top:2px;position:relative;z-index:1">${pct}% do limite</div>`:''}<div style="margin-top:.5rem;position:relative;z-index:1"><button onclick="event.stopPropagation();delCC('${cc.id}')" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;cursor:pointer;font-family:var(--fn)">Remover</button></div></div>
+      <div>
+        <div class="cc-name">${cc.nome}</div>
+        <div class="cc-info">Fatura ${mesLabel[0].toUpperCase()+mesLabel.slice(1)} · Vence dia ${cc.venc||'?'}</div>
+        ${alerta}
+      </div>
+      <div>
+        <div class="cc-uso priv-val">${g>0?'-'+fmt(g):'—'}</div>
+        ${cc.limite?`<div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div><div style="font-size:10px;opacity:.7;margin-top:2px;position:relative;z-index:1">${pct}% do limite de ${fmt(cc.limite)}</div>`:''}
+        <div style="margin-top:.5rem;position:relative;z-index:1">
+          <button onclick="event.stopPropagation();delCC('${cc.id}')" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;cursor:pointer;font-family:var(--fn)">Remover</button>
+        </div>
+      </div>
     </div>`;
   }).join('');
 }
