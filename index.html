@@ -1151,24 +1151,29 @@ window.renderCCFaturas=function(){
   const el=document.getElementById('ccFaturas');
   if(!el)return;
   if(!ccCache.length){el.innerHTML='';return}
+  const mk=mesKey();
   let html='';
   ccCache.forEach(cc=>{
     const txsCC=txsCache.filter(t=>t.cartao===cc.id&&t.val<0);
     if(!txsCC.length)return;
+    // Agrupa por fatura mas só mostra a do mês filtrado
     const faturas={};
     txsCC.forEach(t=>{
-      let fk=mesKey();
+      let fk=mk;
       if(t.vencFatura)fk=t.vencFatura.substring(0,7);
       else if(cc.fecha){
         const d=new Date(t.data+'T12:00:00');
         const ref=d.getDate()>cc.fecha?new Date(d.getFullYear(),d.getMonth()+1,1):new Date(d.getFullYear(),d.getMonth(),1);
         fk=ref.getFullYear()+'-'+(ref.getMonth()+1).toString().padStart(2,'0');
       }
+      // SÓ inclui se fatura pertence ao mês filtrado
+      if(fk!==mk)return;
       if(!faturas[fk])faturas[fk]=[];
       faturas[fk].push(t);
     });
+    if(!Object.keys(faturas).length)return;
     html+=`<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin:.75rem 0 .4rem .25rem">💳 ${cc.nome}</div>`;
-    Object.keys(faturas).sort((a,b)=>b.localeCompare(a)).forEach(fk=>{
+    Object.keys(faturas).forEach(fk=>{
       const txsF=faturas[fk];
       const total=txsF.reduce((s,t)=>s+Math.abs(t.val),0);
       const [y,m]=fk.split('-');
@@ -1199,7 +1204,7 @@ window.renderCCFaturas=function(){
       </div>`;
     });
   });
-  el.innerHTML=html||'<div class="empty"><div class="ei">💳</div>Nenhum lançamento neste mês</div>';
+  el.innerHTML=html||'<div class="empty"><div class="ei">💳</div>Nenhuma fatura neste mês</div>';
 };
 window.toggleFat=function(id){
   const body=document.getElementById('body_'+id);
@@ -1409,15 +1414,17 @@ function renderAll(){
   renderMesLabels();
   atualizarSelects();
   renderDashboard();
-  renderTxs();
-  renderCC();
-  renderCCFaturas();
   renderInvest();
   renderMetas();
-  if(paginaAtual==='fluxo')renderFluxo();
-  if(paginaAtual==='recorrentes')renderRecorrentes();
-  if(paginaAtual==='config')renderCats();
-  if(paginaAtual==='dashboard'){renderRosca();renderEv();}
+  // Renderiza a página atual automaticamente
+  if(paginaAtual==='dashboard'){renderTxs();renderRosca();renderEv();}
+  else if(paginaAtual==='transacoes')renderTxs();
+  else if(paginaAtual==='cartoes'){renderCC();renderCCFaturas();}
+  else if(paginaAtual==='fluxo')renderFluxo();
+  else if(paginaAtual==='recorrentes')renderRecorrentes();
+  else if(paginaAtual==='config')renderCats();
+  // Dashboard sempre atualiza últimas txs e catBars mesmo em outra página
+  if(paginaAtual!=='dashboard')renderDashboard();
 }
 
 // ── DASHBOARD ──
