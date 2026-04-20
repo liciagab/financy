@@ -1198,7 +1198,7 @@ window.renderCCFaturas=function(){
         </div>
         <div class="fat-body" id="body_${fatId}">
           <div class="tx-list" style="gap:4px;padding-top:4px">
-            ${txsF.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(t=>txHTML(t)).join('')}
+            ${txsF.sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(t=>txHTML(t)).join('')}
           </div>
         </div>
       </div>`;
