@@ -326,6 +326,8 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
     <button class="sb-item" onclick="goPage('investimentos')"><span class="si">📈</span>Investimentos</button>
     <div class="sb-sec">Planejamento</div>
     <button class="sb-item" onclick="goPage('metas')"><span class="si">🎯</span>Metas</button>
+    <button class="sb-item" onclick="goPage('caixinha')"><span class="si">🪙</span>Caixinha</button>
+    <button class="sb-item" onclick="goPage('planejamento')"><span class="si">🛒</span>Planejamento</button>
     <button class="sb-item" onclick="goPage('recorrentes')"><span class="si">🔁</span>Recorrentes</button>
     <div class="sb-sec">Sistema</div>
     <button class="sb-item" onclick="goPage('config')"><span class="si">⚙️</span>Configurações</button>
@@ -562,6 +564,43 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
       <div class="card"><div class="ctitle">Seus recorrentes</div><div id="recList"></div></div>
     </div>
 
+    <!-- CAIXINHA -->
+    <div class="page" id="page-caixinha">
+      <div class="ph">
+        <div><div class="ph-title">Caixinha</div><div class="ph-sub">Reservas e economias</div></div>
+        <button class="btn primary" onclick="abrirModal()">+ Depositar</button>
+      </div>
+      <!-- KPIs caixinha -->
+      <div class="g3 gap" id="cxKpis"></div>
+      <!-- Metas por categoria caixinha -->
+      <div class="g2 gap">
+        <div class="card">
+          <div class="ctitle">Definir meta de reserva</div>
+          <div class="field"><label>Categoria</label><select id="cxMetaCat"></select></div>
+          <div class="field"><label>Meta (R$)</label><input type="number" id="cxMetaVal" placeholder="Ex: 5000"/></div>
+          <button class="btn primary" style="width:100%" onclick="addCxMeta()">Definir meta</button>
+        </div>
+        <div class="card">
+          <div class="ctitle">Progresso das metas</div>
+          <div id="cxMetasList"></div>
+        </div>
+      </div>
+      <!-- Histórico -->
+      <div class="card">
+        <div class="ctitle">Histórico de depósitos</div>
+        <div class="tx-list" id="cxHistorico"></div>
+      </div>
+    </div>
+
+    <!-- PLANEJAMENTO -->
+    <div class="page" id="page-planejamento">
+      <div class="ph">
+        <div><div class="ph-title">Planejamento</div><div class="ph-sub">Lista de desejos + análise com IA</div></div>
+        <button class="btn primary" onclick="abrirModalDesejo()">+ Adicionar desejo</button>
+      </div>
+      <div id="desejosList"></div>
+    </div>
+
     <!-- CONFIGURAÇÕES -->
     <div class="page" id="page-config">
       <div class="ph"><div><div class="ph-title">Configurações</div><div class="ph-sub">Categorias e preferências</div></div></div>
@@ -592,7 +631,8 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
     <button class="mob-btn" id="mnFluxo" onclick="goPage('fluxo')"><span class="mi">📋</span>Fluxo</button>
     <button class="mob-btn" id="mnTx" onclick="goPage('transacoes')"><span class="mi">↕️</span>Gastos</button>
     <button class="mob-btn" id="mnCard" onclick="goPage('cartoes')"><span class="mi">💳</span>Cartões</button>
-    <button class="mob-btn" id="mnRec" onclick="goPage('recorrentes')"><span class="mi">🔁</span>Fixos</button>
+    <button class="mob-btn" id="mnCx" onclick="goPage('caixinha')"><span class="mi">🪙</span>Caixinha</button>
+    <button class="mob-btn" id="mnPlan" onclick="goPage('planejamento')"><span class="mi">🛒</span>Planos</button>
     <button class="mob-btn" id="mnCfg" onclick="goPage('config')"><span class="mi">⚙️</span>Config</button>
   </div>
 </nav>
@@ -732,6 +772,27 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
     </div>
     <input type="hidden" id="catEditId"/>
     <button class="btn primary" style="width:100%;height:42px;margin-top:.5rem" id="btnSalvarCat" onclick="salvarCat()">Salvar categoria</button>
+  </div>
+</div>
+
+<!-- MODAL DESEJO -->
+<div class="modal-ov" id="mDesejo">
+  <div class="modal">
+    <div class="modal-title">Novo desejo <button class="modal-x" onclick="fecharModal('mDesejo')">✕</button></div>
+    <div class="field"><label>O que você quer comprar?</label><input type="text" id="dNome" placeholder="Ex: iPhone 16, Notebook, Viagem..."/></div>
+    <div class="f2">
+      <div class="field"><label>Valor estimado (R$)</label><input type="number" id="dValor" placeholder="0,00"/></div>
+      <div class="field"><label>Prioridade</label>
+        <select id="dPrior">
+          <option value="alta">🔴 Alta</option>
+          <option value="media" selected>🟡 Média</option>
+          <option value="baixa">🟢 Baixa</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Observações (opcional)</label><input type="text" id="dObs" placeholder="Contexto, motivo, links..."/></div>
+    <input type="hidden" id="dEditId"/>
+    <button class="btn primary" style="width:100%;height:42px;margin-top:.5rem" onclick="salvarDesejo()">Salvar</button>
   </div>
 </div>
 
@@ -885,13 +946,15 @@ window.goPage=function(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.toggle('active',el.id==='page-'+p));
   document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
   const si=document.querySelector(`.sb-item[onclick*="'${p}'"]`);if(si)si.classList.add('active');
-  const mn={dashboard:'Dash',fluxo:'Fluxo',transacoes:'Tx',cartoes:'Card',recorrentes:'Rec',config:'Cfg'};
+  const mn={dashboard:'Dash',fluxo:'Fluxo',transacoes:'Tx',cartoes:'Card',recorrentes:'Rec',config:'Cfg',caixinha:'Cx',planejamento:'Plan'};
   Object.entries(mn).forEach(([k,v])=>{const b=document.getElementById('mn'+v);if(b)b.classList.toggle('active',k===p)});
   if(p==='dashboard'){renderDashboard();renderRosca();renderEv();}
   if(p==='fluxo')renderFluxo();
   if(p==='transacoes'){atualizarSelects();renderTxs()}
   if(p==='cartoes'){renderCC();renderCCFaturas();}
   if(p==='recorrentes')renderRecorrentes();
+  if(p==='caixinha')renderCaixinha();
+  if(p==='planejamento')renderPlanejamento();
   if(p==='config'){atualizarSelects();renderCats()}
 };
 window.mudaMes=function(d){
@@ -1342,7 +1405,6 @@ window.delCat=async function(id){if(confirm('Remover?')){await dl(['categorias']
 
 // Abre painel direto por categoria (sem depender de grupo)
 window.abrirPainelCategoria=function(cat){
-  const mk=mesKey();
   const txs=txsCache.filter(t=>t.cat===cat&&t.val<0);
   const mesLabel=mesAtual.toLocaleString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('fpTitle').textContent=`${catIco(cat)} ${cat} — ${mesLabel[0].toUpperCase()+mesLabel.slice(1)}`;
@@ -1352,16 +1414,7 @@ window.abrirPainelCategoria=function(cat){
   else{
     html+='<div style="display:flex;flex-direction:column;gap:6px">';
     txs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(t=>{
-      const cc=t.cartao?ccCache.find(c=>c.id===t.cartao):null;
-      const prev=(t.status||'realizado')==='previsto';
-      html+=`<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:var(--s2);border:1px solid var(--bd)">
-        <div style="width:30px;height:30px;border-radius:8px;background:${catCor(t.cat)}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${catIco(t.cat)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.desc}</div>
-          <div style="font-size:11px;color:var(--t3)">${cc?'💳 '+cc.nome+' · ':''}${new Date(t.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}${prev?' <span class="pill p-prev">previsto</span>':''}</div>
-        </div>
-        <div style="font-size:13px;font-weight:700;color:var(--rd)">-${fmt(t.val)}</div>
-      </div>`;
+      html+=txHTMLPainel(t);
     });
     html+='</div>';
   }
@@ -1386,27 +1439,42 @@ window.abrirPainel=async function(grupoId,mes){
   const mesLabel=new Date(mes+'-15').toLocaleString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('fpTitle').textContent=`${g.nome} — ${mesLabel[0].toUpperCase()+mesLabel.slice(1)}`;
   const total=txs.reduce((s,t)=>s+Math.abs(t.val),0);
-  let html=`<div style="font-family:var(--mo);font-size:15px;font-weight:600;color:var(--rd);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--bd)">Total: ${fmt(total)}</div>`;
+  let html=`<div style="font-size:15px;font-weight:700;color:var(--rd);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--bd)">Total: ${fmt(total)}</div>`;
   if(!txs.length){html+='<div class="empty"><div class="ei">📋</div>Nenhum lançamento</div>'}
   else{
-    html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
-    txs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(t=>{
-      const prev=t.status==='previsto';
-      const ccNome=t.cartao?ccCache.find(c=>c.id===t.cartao)?.nome:'';
-      html+=`<div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:11px;background:var(--s2);border:1px solid var(--bd)">
-        <div style="width:30px;height:30px;border-radius:8px;background:${catCor(t.cat)}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${catIco(t.cat)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.desc}</div>
-          <div style="font-size:11px;color:var(--t3)">${t.cat}${ccNome?' · 💳 '+ccNome:''} · ${new Date(t.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} ${prev?'<span class="pill p-prev">previsto</span>':''}</div>
-        </div>
-        <div style="font-family:var(--mo);font-size:13px;font-weight:600;color:${t.val>0?'var(--gr)':'var(--rd)'}">${t.val>0?'+':'-'}${fmt(t.val)}</div>
-      </div>`;
-    });
+    html+='<div style="display:flex;flex-direction:column;gap:6px">';
+    txs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(t=>{html+=txHTMLPainel(t)});
     html+='</div>';
   }
   document.getElementById('fpBody').innerHTML=html;
   document.getElementById('fluxoPanel').classList.add('open');
   document.getElementById('fpOv').classList.add('open');
+};
+
+// txHTMLPainel — versão do painel lateral com botões editar/excluir
+function txHTMLPainel(t){
+  const prev=(t.status||'realizado')==='previsto';
+  const cc=t.cartao?ccCache.find(c=>c.id===t.cartao):null;
+  const valColor=t.val>0?'var(--gr)':'var(--rd)';
+  return`<div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:11px;background:var(--s2);border:1px solid var(--bd)">
+    <div style="width:30px;height:30px;border-radius:8px;background:${catCor(t.cat)}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${catIco(t.cat)}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.desc}</div>
+      <div style="font-size:11px;color:var(--t3)">${t.cat}${cc?' · 💳 '+cc.nome:''} · ${new Date(t.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}${prev?' <span class="pill p-prev">previsto</span>':''}</div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:${valColor};white-space:nowrap">${t.val>0?'+':'-'}${fmt(t.val)}</div>
+    <div style="display:flex;gap:2px;flex-shrink:0">
+      ${prev&&t.val<0?`<button onclick="confirmarTx('${t.id}')" style="background:var(--gr-l);border:none;color:var(--gr);font-size:11px;font-weight:700;padding:3px 7px;border-radius:7px;cursor:pointer;font-family:var(--fn)" title="Confirmar">✓</button>`:''}
+      <button onclick="editarTxPainel('${t.id}')" style="background:var(--ac-l);border:none;color:var(--ac);font-size:11px;padding:3px 7px;border-radius:7px;cursor:pointer;font-family:var(--fn)" title="Editar">✏️</button>
+      <button onclick="delTxPainel('${t.id}')" style="background:var(--rd-l);border:none;color:var(--rd);font-size:11px;padding:3px 7px;border-radius:7px;cursor:pointer;font-family:var(--fn)" title="Excluir">✕</button>
+    </div>
+  </div>`;
+}
+window.editarTxPainel=function(id){fecharPainel();setTimeout(()=>editarTx(id),200)};
+window.delTxPainel=async function(id){
+  if(!confirm('Excluir este lançamento?'))return;
+  await dlTx(id);toast('Removido.');
+  fecharPainel();
 };
 
 // ── RENDER TODOS ──
@@ -1908,10 +1976,32 @@ async function renderFluxo(){
     if(isExp){
       subcatsArr.forEach(cat=>{
         const totC={};meses.forEach(m=>{totC[m.k]=(txPorMes[m.k]||[]).filter(g.match).filter(t=>t.cat===cat).reduce((s,t)=>s+Math.abs(t.val),0)});
-        html+=`<tr class="f-sub">
-          <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${catCor(cat)};margin:0 6px 0 16px;vertical-align:middle"></span>${catIco(cat)} ${cat}</td>
-          ${meses.map(m=>`<td class="${totC[m.k]>0?(g.sinal>0?'fv-pos':'fv-neg'):'fv-zero'}" style="cursor:pointer" onclick="abrirPainelCat('${g.id}','${cat}','${m.k}')">${totC[m.k]>0?fmt(totC[m.k]):'—'}</td>`).join('')}
+        const isExpCat=!!(window.fluxoExpCat||{})[g.id+'_'+cat];
+        html+=`<tr class="f-sub" onclick="toggleFluxoCat('${g.id}','${cat}')" style="cursor:pointer">
+          <td>
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${catCor(cat)};margin:0 6px 0 16px;vertical-align:middle"></span>
+            <span style="font-size:10px;transition:transform .2s;display:inline-block;transform:rotate(${isExpCat?90:0}deg);margin-right:3px;color:var(--t3)">▶</span>
+            ${catIco(cat)} ${cat}
+          </td>
+          ${meses.map(m=>`<td class="${totC[m.k]>0?(g.sinal>0?'fv-pos':'fv-neg'):'fv-zero'}" onclick="event.stopPropagation();abrirPainelCat('${g.id}','${cat}','${m.k}')">${totC[m.k]>0?fmt(totC[m.k]):'—'}</td>`).join('')}
         </tr>`;
+        // Nível 3: lançamentos individuais
+        if(isExpCat){
+          // Usa o primeiro mês com dados, ou mês atual
+          const mesPrincipal=meses.find(m=>totC[m.k]>0)||meses[meses.length-1];
+          const txsNivel3=(txPorMes[mesPrincipal.k]||[]).filter(g.match).filter(t=>t.cat===cat);
+          txsNivel3.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(t=>{
+            const cc=t.cartao?ccCache.find(c=>c.id===t.cartao):null;
+            const data=t.data?new Date(t.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';
+            html+=`<tr style="background:var(--ac-l)!important">
+              <td style="padding-left:44px;background:var(--ac-l)!important">
+                <span style="font-size:12px;color:var(--t)">${t.desc}</span>
+                <span style="font-size:10px;color:var(--t3);margin-left:6px">${cc?'💳 '+cc.nome:''} ${data}</span>
+              </td>
+              ${meses.map(m=>m.k===mesPrincipal.k?`<td class="${t.val>0?'fv-pos':'fv-neg'}" style="font-size:12px">${fmt(t.val)}</td>`:`<td class="fv-zero">—</td>`).join('')}
+            </tr>`;
+          });
+        }
       });
     }
   });
@@ -1919,9 +2009,9 @@ async function renderFluxo(){
   body.innerHTML=html;
 }
 window.fluxoExp={};
-window.toggleFluxoGrp=function(id){
-  window.fluxoExp[id]=!window.fluxoExp[id];renderFluxo();
-};
+window.fluxoExpCat={};
+window.toggleFluxoGrp=function(id){window.fluxoExp[id]=!window.fluxoExp[id];renderFluxo()};
+window.toggleFluxoCat=function(grpId,cat){const k=grpId+'_'+cat;window.fluxoExpCat[k]=!window.fluxoExpCat[k];renderFluxo()};
 window.abrirPainelCat=async function(grupoId,cat,mes){
   const g=GRUPOS.find(x=>x.id===grupoId);if(!g)return;
   if(!txPorMes[mes])await carregarMes(mes);
@@ -1929,21 +2019,11 @@ window.abrirPainelCat=async function(grupoId,cat,mes){
   const mesLabel=new Date(mes+'-15').toLocaleString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('fpTitle').textContent=`${catIco(cat)} ${cat} — ${mesLabel[0].toUpperCase()+mesLabel.slice(1)}`;
   const total=txs.reduce((s,t)=>s+Math.abs(t.val),0);
-  let html=`<div style="font-family:var(--mo);font-size:15px;font-weight:600;color:var(--rd);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--bd)">Total: ${fmt(total)}</div>`;
+  let html=`<div style="font-size:15px;font-weight:700;color:var(--rd);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--bd)">Total: ${fmt(total)}</div>`;
   if(!txs.length)html+='<div class="empty"><div class="ei">📋</div>Nenhum lançamento</div>';
   else{
     html+='<div style="display:flex;flex-direction:column;gap:6px">';
-    txs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(t=>{
-      const cc=t.cartao?ccCache.find(c=>c.id===t.cartao):null;
-      html+=`<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:var(--s2);border:1px solid var(--bd)">
-        <div style="width:30px;height:30px;border-radius:8px;background:${catCor(t.cat)}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${catIco(t.cat)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.desc}</div>
-          <div style="font-size:11px;color:var(--t3)">${cc?'💳 '+cc.nome+' · ':''}${new Date(t.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} ${(t.status||'realizado')==='previsto'?'<span class="pill p-prev">previsto</span>':''}</div>
-        </div>
-        <div style="font-family:var(--mo);font-size:13px;font-weight:600;color:${t.val>0?'var(--gr)':'var(--rd)'}">${t.val>0?'+':'-'}${fmt(t.val)}</div>
-      </div>`;
-    });
+    txs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(t=>{html+=txHTMLPainel(t)});
     html+='</div>';
   }
   document.getElementById('fpBody').innerHTML=html;
@@ -1986,6 +2066,227 @@ window.exportCSV=function(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=`financas_${mesKey()}.csv`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
   toast(`${txs.length} transações exportadas!`);
+};
+
+// ── CAIXINHA ──
+let cxMetas={};
+async function carregarCxMetas(){
+  try{
+    const {getDoc,doc:d2}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const snap=await getDoc(d2(db,'users',uid,'caixinha_metas','metas'));
+    cxMetas=snap.exists()?snap.data():{};
+  }catch{cxMetas={}}
+}
+async function salvarCxMetas(){
+  await setDoc(doc(db,'users',uid,'caixinha_metas','metas'),cxMetas);
+}
+function getCxTxsTodas(){
+  // Busca em todos os meses carregados
+  const all=[];
+  const vistas=new Set();
+  Object.values(txPorMes).forEach(txs=>(txs||[]).forEach(t=>{
+    if(!vistas.has(t.id)&&t.val<0&&catTipo(t.cat)==='caixinha'){vistas.add(t.id);all.push(t)}
+  }));
+  // Também inclui do mês atual
+  txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='caixinha').forEach(t=>{if(!vistas.has(t.id)){vistas.add(t.id);all.push(t)}});
+  return all.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+}
+async function renderCaixinha(){
+  await carregarCxMetas();
+  // Carrega últimos 12 meses para histórico completo
+  const promises=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(mesAtual.getFullYear(),mesAtual.getMonth()-i,1);
+    const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+    promises.push(carregarMes(k));
+  }
+  await Promise.all(promises);
+  const txsCx=getCxTxsTodas();
+  // Total por categoria
+  const totPorCat={};
+  txsCx.forEach(t=>{totPorCat[t.cat]=(totPorCat[t.cat]||0)+Math.abs(t.val)});
+  const totalGeral=Object.values(totPorCat).reduce((a,b)=>a+b,0);
+  // KPIs
+  const kpis=document.getElementById('cxKpis');
+  if(kpis){
+    const mesAtualCx=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
+    kpis.innerHTML=`
+      <div class="kpi te"><div class="kpi-icon" style="background:var(--te-l)">🪙</div><div class="kpi-lbl">Total guardado</div><div class="kpi-val priv-val" style="color:var(--te)">${fmt(totalGeral)}</div></div>
+      <div class="kpi gr"><div class="kpi-icon gr">📥</div><div class="kpi-lbl">Guardado este mês</div><div class="kpi-val gr priv-val">${fmt(mesAtualCx)}</div></div>
+      <div class="kpi ac"><div class="kpi-icon ac">🎯</div><div class="kpi-lbl">Metas definidas</div><div class="kpi-val ac">${Object.keys(cxMetas).length}</div></div>`;
+  }
+  // Select de meta
+  const cats=allCats().filter(c=>c.tipo==='caixinha');
+  const mc=document.getElementById('cxMetaCat');
+  if(mc)mc.innerHTML='<option value="">Selecione...</option>'+cats.map(c=>`<option value="${c.nome}">${c.icone} ${c.nome}</option>`).join('');
+  // Metas
+  const ml=document.getElementById('cxMetasList');
+  if(ml){
+    if(!Object.keys(cxMetas).length){ml.innerHTML='<div class="empty"><div class="ei">🎯</div>Nenhuma meta definida</div>'}
+    else{
+      ml.innerHTML=Object.entries(cxMetas).map(([cat,meta])=>{
+        const atual=totPorCat[cat]||0;
+        const pct=Math.min(Math.round(atual/meta.valor*100),100);
+        const cor=pct>=100?'var(--gr)':pct>=60?'var(--am)':'var(--ac)';
+        // Previsão: média mensal
+        const mesesComDeposito=new Set(txsCx.filter(t=>t.cat===cat).map(t=>t.data?.substring(0,7))).size||1;
+        const mediaMensal=atual/mesesComDeposito;
+        const faltam=Math.max(meta.valor-atual,0);
+        const mesesPrevisao=mediaMensal>0?Math.ceil(faltam/mediaMensal):null;
+        const prevLabel=pct>=100?'✅ Meta atingida!':mesesPrevisao?`~${mesesPrevisao} mes${mesesPrevisao>1?'es':''} para atingir`:'Sem histórico suficiente';
+        return`<div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:600">${catIco(cat)} ${cat}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="priv-val" style="font-size:12px;font-weight:600">${fmt(atual)} / ${fmt(meta.valor)}</span>
+              <span style="background:${cor}22;color:${cor};font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px">${pct}%</span>
+              <button onclick="delCxMeta('${cat}')" class="tx-act del" style="padding:2px 5px">✕</button>
+            </div>
+          </div>
+          <div class="meta-bar"><div class="meta-fill" style="width:${pct}%;background:${cor}"></div></div>
+          <div style="font-size:11px;color:var(--t3);margin-top:4px">${prevLabel}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+  // Histórico
+  const hist=document.getElementById('cxHistorico');
+  if(hist){
+    if(!txsCx.length){hist.innerHTML='<div class="empty"><div class="ei">🪙</div>Nenhum depósito ainda</div>'}
+    else hist.innerHTML=txsCx.map(t=>txHTMLPainel(t)).join('');
+  }
+}
+window.addCxMeta=async function(){
+  const cat=document.getElementById('cxMetaCat').value;
+  const val=parseFloat(document.getElementById('cxMetaVal').value);
+  if(!cat||!val){toast('Preencha categoria e valor');return}
+  cxMetas[cat]={valor:val};
+  await salvarCxMetas();
+  document.getElementById('cxMetaVal').value='';
+  toast('Meta definida! 🎯');renderCaixinha();
+};
+window.delCxMeta=async function(cat){
+  delete cxMetas[cat];await salvarCxMetas();toast('Removida.');renderCaixinha();
+};
+
+// ── PLANEJAMENTO ──
+let desejos=[];
+async function carregarDesejos(){
+  try{
+    const snap=await getDocs(collection(db,'users',uid,'desejos'));
+    desejos=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
+      const p={alta:0,media:1,baixa:2};return(p[a.prioridade]||1)-(p[b.prioridade]||1);
+    });
+  }catch{desejos=[]}
+}
+function renderPlanejamento(){
+  carregarDesejos().then(()=>{
+    const el=document.getElementById('desejosList');if(!el)return;
+    if(!desejos.length){
+      el.innerHTML=`<div class="card" style="text-align:center;padding:2.5rem">
+        <div style="font-size:32px;margin-bottom:.5rem">🛒</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:.4rem">Lista de desejos vazia</div>
+        <div style="font-size:13px;color:var(--t3)">Adicione itens que deseja comprar e a IA vai te ajudar a planejar.</div>
+      </div>`;
+      return;
+    }
+    const priorCor={alta:'var(--rd)',media:'var(--am)',baixa:'var(--gr)'};
+    const priorLabel={alta:'🔴 Alta',media:'🟡 Média',baixa:'🟢 Baixa'};
+    el.innerHTML=desejos.map(d=>`
+      <div class="card gap" style="margin-bottom:.75rem">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:.3rem">
+              <span style="font-size:15px;font-weight:700">${d.nome}</span>
+              <span style="background:${priorCor[d.prioridade]||'var(--am)'}22;color:${priorCor[d.prioridade]||'var(--am)'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px">${priorLabel[d.prioridade]||'Média'}</span>
+            </div>
+            ${d.obs?`<div style="font-size:12px;color:var(--t2);margin-bottom:.5rem">${d.obs}</div>`:''}
+            <div style="font-size:13px;font-weight:700;color:var(--ac)" class="priv-val">${d.valor?fmt(d.valor):'Valor não definido'}</div>
+          </div>
+          <div style="display:flex;gap:5px;flex-shrink:0">
+            <button class="btn sm" onclick="analisarDesejo('${d.id}')" style="background:linear-gradient(135deg,#1e1b4b,#4c1d95);color:#fff;border:none">✨ Analisar</button>
+            <button class="tx-act" onclick="editarDesejo('${d.id}')" style="color:var(--ac)">✏️</button>
+            <button class="tx-act del" onclick="delDesejo('${d.id}')">✕</button>
+          </div>
+        </div>
+        <div id="analise_${d.id}" style="display:none;margin-top:.75rem;padding:.85rem;background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:var(--rsm)"></div>
+      </div>`).join('');
+  });
+}
+window.abrirModalDesejo=function(){
+  ['dNome','dValor','dObs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('dPrior').value='media';
+  document.getElementById('dEditId').value='';
+  document.getElementById('mDesejo').classList.add('open');
+};
+window.editarDesejo=function(id){
+  const d=desejos.find(x=>x.id===id);if(!d)return;
+  document.getElementById('dNome').value=d.nome||'';
+  document.getElementById('dValor').value=d.valor||'';
+  document.getElementById('dObs').value=d.obs||'';
+  document.getElementById('dPrior').value=d.prioridade||'media';
+  document.getElementById('dEditId').value=id;
+  document.getElementById('mDesejo').classList.add('open');
+};
+window.salvarDesejo=async function(){
+  const nome=document.getElementById('dNome').value.trim();
+  const valor=parseFloat(document.getElementById('dValor').value)||0;
+  const obs=document.getElementById('dObs').value.trim();
+  const prioridade=document.getElementById('dPrior').value;
+  const editId=document.getElementById('dEditId').value;
+  if(!nome){toast('Nome obrigatório');return}
+  const id=editId||'desejo_'+Date.now();
+  await setDoc(doc(db,'users',uid,'desejos',id),{id,nome,valor,obs,prioridade,ts:Date.now()});
+  toast(editId?'Atualizado!':'Desejo adicionado! 🛒');
+  fecharModal('mDesejo');renderPlanejamento();
+};
+window.delDesejo=async function(id){
+  if(!confirm('Remover?'))return;
+  await deleteDoc(doc(db,'users',uid,'desejos',id));
+  toast('Removido.');renderPlanejamento();
+};
+window.analisarDesejo=async function(id){
+  const d=desejos.find(x=>x.id===id);if(!d)return;
+  const el=document.getElementById('analise_'+id);if(!el)return;
+  el.style.display='block';
+  el.innerHTML='<div class="dot-pulse" style="justify-content:center"><span></span><span></span><span></span></div>';
+  // Monta contexto financeiro
+  const R=txsCache.filter(t=>t.val>0).reduce((s,t)=>s+t.val,0);
+  const D=txsCache.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
+  const I=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='investimento').reduce((s,t)=>s+Math.abs(t.val),0);
+  const CX=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
+  const saldo=R-D-I-CX;
+  const mesLabel=mesAtual.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:`Você é um assistente financeiro pessoal. Analise se é uma boa hora para comprar o seguinte item e dê uma recomendação prática.
+
+Item desejado: ${d.nome}
+Valor estimado: R$ ${d.valor||'não informado'}
+Prioridade: ${d.prioridade}
+${d.obs?'Obs: '+d.obs:''}
+
+Situação financeira atual (${mesLabel}):
+- Receitas: R$ ${R.toFixed(2)}
+- Despesas: R$ ${D.toFixed(2)}
+- Investimentos: R$ ${I.toFixed(2)}
+- Caixinha/Reserva: R$ ${CX.toFixed(2)}
+- Saldo livre: R$ ${saldo.toFixed(2)}
+
+Responda de forma direta e prática em 3-4 parágrafos curtos. Inclua: (1) se é boa hora agora, (2) impacto no orçamento, (3) sugestão de quando/como comprar. Seja honesto mas encorajador. Responda em português.`}]
+      })
+    });
+    const data=await resp.json();
+    const txt=data.content?.[0]?.text||'Não foi possível gerar análise.';
+    el.innerHTML=`<div style="font-size:13px;color:#e0e7ff;line-height:1.7">${txt.replace(/\n/g,'<br>')}</div>`;
+  }catch(e){
+    el.innerHTML='<div style="font-size:13px;color:#e0e7ff">Erro ao conectar com IA. Tente novamente.</div>';
+  }
 };
 
 // ── INIT ──
