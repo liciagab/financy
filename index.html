@@ -333,6 +333,8 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
     <button class="sb-item" onclick="goPage('config')"><span class="si">⚙️</span>Configurações</button>
     <div style="flex:1"></div>
     <div class="sb-foot">
+      <button class="btn" style="width:100%;margin-bottom:6px;justify-content:center" onclick="abrirBuscaGlobal()">🔍 Busca global</button>
+      <button class="btn" style="width:100%;margin-bottom:8px;justify-content:center" onclick="exportarPDF()">📄 Exportar PDF</button>
       <div class="sav" id="savPill"><div class="sav-dot"></div>Salvando...</div>
     </div>
   </nav>
@@ -341,8 +343,9 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
     <!-- MOBILE HEADER -->
     <div class="mob-hdr" id="mobHdr">
       <div class="mob-logo">💰 Financy</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="btn sm ghost" id="privBtnM" onclick="togglePriv()" title="Modo privacidade" style="font-size:16px;padding:0 8px">👁</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn sm ghost" id="privBtnM" onclick="togglePriv()" style="font-size:16px;padding:0 8px">👁</button>
+        <button class="btn sm ghost" onclick="abrirBuscaGlobal()" style="font-size:16px;padding:0 8px">🔍</button>
         <button class="btn sm ghost" onclick="abrirModal()">+ Lançar</button>
         <img class="sb-av" id="sbAvM" src="" style="display:none;cursor:pointer" onclick="logout()"/>
       </div>
@@ -370,6 +373,23 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
         <div class="kpi rd"><div class="kpi-icon rd">🔴</div><div class="kpi-lbl">Despesas</div><div class="kpi-val rd priv-val" id="kD">R$ 0</div></div>
         <div class="kpi ac"><div class="kpi-icon ac">⚡</div><div class="kpi-lbl">Saldo livre</div><div class="kpi-val ac priv-val" id="kS">R$ 0</div></div>
         <div class="kpi bl"><div class="kpi-icon bl">📈</div><div class="kpi-lbl">Guardado</div><div class="kpi-val bl priv-val" id="kI">R$ 0</div></div>
+      </div>
+      <!-- SCORE DE SAÚDE FINANCEIRA -->
+      <div class="card gap" id="scoreCard">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <div class="ctitle" style="margin:0">Score de Saúde Financeira</div>
+          <div id="scoreBadge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap">
+          <div style="position:relative;width:90px;height:90px;flex-shrink:0">
+            <canvas id="chartScore" width="90" height="90"></canvas>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-size:22px;font-weight:800" id="scoreNum">—</div>
+              <div style="font-size:9px;color:var(--t3);font-weight:700">/100</div>
+            </div>
+          </div>
+          <div style="flex:1;min-width:180px" id="scoreCriteria"></div>
+        </div>
       </div>
       <!-- DESPESAS POR CATEGORIA -->
       <div class="card gap">
@@ -793,6 +813,19 @@ body.privado .priv-val{filter:blur(7px);pointer-events:none}
     <div class="field"><label>Observações (opcional)</label><input type="text" id="dObs" placeholder="Contexto, motivo, links..."/></div>
     <input type="hidden" id="dEditId"/>
     <button class="btn primary" style="width:100%;height:42px;margin-top:.5rem" onclick="salvarDesejo()">Salvar</button>
+  </div>
+</div>
+
+<!-- BUSCA GLOBAL -->
+<div class="modal-ov" id="mBusca" style="align-items:flex-start;padding-top:5vh">
+  <div class="modal" style="max-height:80vh">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
+      <input type="text" id="buscaGlobalInput" placeholder="🔍 Buscar em todos os meses..." style="flex:1;height:42px;font-size:15px" oninput="executarBuscaGlobal(this.value)"/>
+      <button class="modal-x" onclick="fecharModal('mBusca')">✕</button>
+    </div>
+    <div id="buscaGlobalRes" style="max-height:60vh;overflow-y:auto">
+      <div style="text-align:center;color:var(--t3);font-size:13px;padding:2rem">Digite para buscar em todos os seus lançamentos</div>
+    </div>
   </div>
 </div>
 
@@ -1529,6 +1562,7 @@ function renderDashboard(){
   }
   // Últimas
   document.getElementById('txDash').innerHTML=txsCache.slice(0,6).map(t=>txHTML(t)).join('')||'<div class="empty"><div class="ei">📋</div>Sem lançamentos</div>';
+  renderScore();
   // Rosca e evolução sempre visíveis
   renderRosca();
   renderEv();
@@ -2249,8 +2283,7 @@ window.analisarDesejo=async function(id){
   const d=desejos.find(x=>x.id===id);if(!d)return;
   const el=document.getElementById('analise_'+id);if(!el)return;
   el.style.display='block';
-  el.innerHTML='<div class="dot-pulse" style="justify-content:center"><span></span><span></span><span></span></div>';
-  // Monta contexto financeiro
+  el.innerHTML='<div class="dot-pulse" style="justify-content:center;padding:1rem"><span></span><span></span><span></span></div>';
   const R=txsCache.filter(t=>t.val>0).reduce((s,t)=>s+t.val,0);
   const D=txsCache.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
   const I=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='investimento').reduce((s,t)=>s+Math.abs(t.val),0);
@@ -2260,33 +2293,223 @@ window.analisarDesejo=async function(id){
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:`Você é um assistente financeiro pessoal. Analise se é uma boa hora para comprar o seguinte item e dê uma recomendação prática.
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:600,
+        messages:[{role:'user',content:`Você é um assistente financeiro pessoal. Analise se é boa hora de comprar e dê recomendação prática.
 
-Item desejado: ${d.nome}
-Valor estimado: R$ ${d.valor||'não informado'}
-Prioridade: ${d.prioridade}
-${d.obs?'Obs: '+d.obs:''}
+Item: ${d.nome} | Valor: R$ ${d.valor||'?'} | Prioridade: ${d.prioridade}${d.obs?' | Obs: '+d.obs:''}
 
-Situação financeira atual (${mesLabel}):
-- Receitas: R$ ${R.toFixed(2)}
-- Despesas: R$ ${D.toFixed(2)}
-- Investimentos: R$ ${I.toFixed(2)}
-- Caixinha/Reserva: R$ ${CX.toFixed(2)}
-- Saldo livre: R$ ${saldo.toFixed(2)}
+Finanças de ${mesLabel}: Receita R$${R.toFixed(0)} | Despesas R$${D.toFixed(0)} | Investido R$${I.toFixed(0)} | Caixinha R$${CX.toFixed(0)} | Saldo livre R$${saldo.toFixed(0)}
 
-Responda de forma direta e prática em 3-4 parágrafos curtos. Inclua: (1) se é boa hora agora, (2) impacto no orçamento, (3) sugestão de quando/como comprar. Seja honesto mas encorajador. Responda em português.`}]
+Responda em 3 parágrafos curtos em português: (1) é boa hora? (2) impacto no orçamento (3) quando/como comprar. Seja direto e prático.`}]
       })
     });
+    if(!resp.ok){
+      const err=await resp.json().catch(()=>({}));
+      throw new Error(err.error?.message||'Erro '+resp.status);
+    }
     const data=await resp.json();
-    const txt=data.content?.[0]?.text||'Não foi possível gerar análise.';
-    el.innerHTML=`<div style="font-size:13px;color:#e0e7ff;line-height:1.7">${txt.replace(/\n/g,'<br>')}</div>`;
+    const txt=data.content?.[0]?.text||'Sem resposta.';
+    el.innerHTML=`<div style="font-size:13px;color:#e0e7ff;line-height:1.75">${txt.replace(/\n\n/g,'</p><p style="margin-top:.6rem">').replace(/\n/g,'<br>')}</div>`;
   }catch(e){
-    el.innerHTML='<div style="font-size:13px;color:#e0e7ff">Erro ao conectar com IA. Tente novamente.</div>';
+    el.innerHTML=`<div style="font-size:12px;color:#fca5a5;padding:.5rem">⚠️ ${e.message||'Erro ao conectar com IA.'}</div>`;
   }
+};
+
+// ── SCORE DE SAÚDE FINANCEIRA ──
+let chartScore=null;
+function calcScore(){
+  const R=txsCache.filter(t=>t.val>0).reduce((s,t)=>s+t.val,0);
+  const D=txsCache.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
+  const I=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='investimento').reduce((s,t)=>s+Math.abs(t.val),0);
+  const CX=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
+  const S=R-D-I-CX;
+  if(!R)return{score:0,criterios:[]};
+  const pctInvest=R>0?(I+CX)/R*100:0;
+  const pctSaldo=R>0?S/R*100:0;
+  const pctDesp=R>0?D/R*100:0;
+  const temCartao=txsCache.some(t=>t.cartao&&t.val<0);
+  const prevPendentes=txsCache.filter(t=>t.status==='previsto'&&t.val<0).length;
+  // Critérios (cada um vale até 25 pts)
+  const c1={nome:'Investindo',desc:`${pctInvest.toFixed(1)}% da renda`,pts:Math.min(Math.round(pctInvest/10*25),25),max:25,meta:'Meta: 10%'};
+  const c2={nome:'Saldo positivo',desc:pctSaldo>=0?`+${pctSaldo.toFixed(1)}% sobrou`:`${pctSaldo.toFixed(1)}% negativo`,pts:pctSaldo>=20?25:pctSaldo>=10?18:pctSaldo>=0?10:0,max:25,meta:'Meta: sobrar 20%'};
+  const c3={nome:'Controle de gastos',desc:`${pctDesp.toFixed(1)}% em despesas`,pts:pctDesp<=60?25:pctDesp<=75?18:pctDesp<=90?10:5,max:25,meta:'Meta: gastar <60%'};
+  const c4={nome:'Sem pendências',desc:prevPendentes>0?`${prevPendentes} previsto${prevPendentes>1?'s':''} em aberto`:'Tudo confirmado',pts:prevPendentes===0?25:prevPendentes<=2?18:prevPendentes<=5?10:5,max:25,meta:'Meta: 0 pendentes'};
+  const score=c1.pts+c2.pts+c3.pts+c4.pts;
+  return{score,criterios:[c1,c2,c3,c4]};
+}
+function renderScore(){
+  const{score,criterios}=calcScore();
+  const el=document.getElementById('scoreNum');
+  const badge=document.getElementById('scoreBadge');
+  const crit=document.getElementById('scoreCriteria');
+  if(!el)return;
+  el.textContent=score;
+  const cor=score>=80?'#10b981':score>=60?'#f59e0b':score>=40?'#f97316':'#ef4444';
+  const label=score>=80?'🟢 Excelente':score>=60?'🟡 Bom':score>=40?'🟠 Regular':'🔴 Atenção';
+  el.style.color=cor;
+  if(badge){badge.textContent=label;badge.style.background=cor+'22';badge.style.color=cor}
+  // Mini donut
+  if(typeof Chart!=='undefined'){
+    const canvas=document.getElementById('chartScore');
+    if(canvas){
+      if(chartScore)chartScore.destroy();
+      chartScore=new Chart(canvas,{
+        type:'doughnut',
+        data:{datasets:[{data:[score,100-score],backgroundColor:[cor,'rgba(0,0,0,.06)'],borderWidth:0,hoverOffset:0}]},
+        options:{responsive:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:600}}
+      });
+    }
+  }
+  if(crit&&criterios.length){
+    crit.innerHTML=criterios.map(c=>{
+      const pct=Math.round(c.pts/c.max*100);
+      const cc=pct>=80?'var(--gr)':pct>=60?'var(--am)':'var(--rd)';
+      return`<div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <span style="font-size:12px;font-weight:600">${c.nome}</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:11px;color:var(--t3)">${c.desc}</span>
+            <span style="font-size:10px;font-weight:700;color:${cc}">${c.pts}/${c.max}</span>
+          </div>
+        </div>
+        <div style="height:4px;background:var(--s3);border-radius:100px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${cc};border-radius:100px;transition:width .5s"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ── BUSCA GLOBAL ──
+let buscaTimer=null;
+window.abrirBuscaGlobal=function(){
+  document.getElementById('mBusca').classList.add('open');
+  setTimeout(()=>document.getElementById('buscaGlobalInput')?.focus(),100);
+};
+window.executarBuscaGlobal=async function(q){
+  clearTimeout(buscaTimer);
+  const el=document.getElementById('buscaGlobalRes');
+  if(!q||q.length<2){el.innerHTML='<div style="text-align:center;color:var(--t3);font-size:13px;padding:2rem">Digite ao menos 2 caracteres</div>';return}
+  el.innerHTML='<div style="text-align:center;color:var(--t3);font-size:13px;padding:1rem">Buscando...</div>';
+  buscaTimer=setTimeout(async()=>{
+    const termo=q.toLowerCase();
+    // Busca nos últimos 12 meses
+    const promises=[];
+    for(let i=0;i<12;i++){
+      const d=new Date(mesAtual.getFullYear(),mesAtual.getMonth()-i,1);
+      const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+      promises.push(carregarMes(k));
+    }
+    await Promise.all(promises);
+    const todas=[];const vistas=new Set();
+    Object.entries(txPorMes).forEach(([mk,txs])=>(txs||[]).forEach(t=>{
+      if(!vistas.has(t.id)&&(t.desc||'').toLowerCase().includes(termo)){
+        vistas.add(t.id);todas.push({...t,_mk:mk});
+      }
+    }));
+    // Também busca no mês atual
+    txsCache.forEach(t=>{
+      if(!vistas.has(t.id)&&(t.desc||'').toLowerCase().includes(termo)){
+        vistas.add(t.id);todas.push({...t,_mk:mesKey()});
+      }
+    });
+    todas.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+    if(!todas.length){el.innerHTML='<div class="empty"><div class="ei">🔍</div>Nenhum resultado</div>';return}
+    const total=todas.reduce((s,t)=>s+t.val,0);
+    el.innerHTML=`<div style="font-size:12px;color:var(--t3);margin-bottom:.75rem;padding:.5rem .25rem;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between">
+      <span>${todas.length} resultado${todas.length!==1?'s':''}</span>
+      <span style="font-weight:700;color:${total>=0?'var(--gr)':'var(--rd)'}">${total>=0?'+':''}${fmt(total)}</span>
+    </div>
+    <div class="tx-list" style="gap:5px">${todas.map(t=>txHTMLPainel(t)).join('')}</div>`;
+  },300);
+};
+
+// ── EXPORTAR PDF ──
+window.exportarPDF=async function(){
+  toast('Gerando relatório... ⏳',5000);
+  await new Promise(r=>setTimeout(r,100));
+  // Carrega 3 meses para o relatório
+  for(let i=0;i<3;i++){
+    const d=new Date(mesAtual.getFullYear(),mesAtual.getMonth()-i,1);
+    const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+    await carregarMes(k);
+  }
+  const R=txsCache.filter(t=>t.val>0).reduce((s,t)=>s+t.val,0);
+  const D=txsCache.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
+  const I=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='investimento').reduce((s,t)=>s+Math.abs(t.val),0);
+  const CX=txsCache.filter(t=>t.val<0&&catTipo(t.cat)==='caixinha').reduce((s,t)=>s+Math.abs(t.val),0);
+  const S=R-D-I-CX;
+  const{score,criterios}=calcScore();
+  const mesLabel=mesAtual.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+  const mesLabelCap=mesLabel[0].toUpperCase()+mesLabel.slice(1);
+  // Por categoria
+  const porCat={};
+  txsCache.filter(t=>t.val<0&&catTipo(t.cat)!=='investimento'&&catTipo(t.cat)!=='caixinha').forEach(t=>porCat[t.cat]=(porCat[t.cat]||0)+Math.abs(t.val));
+  const catRows=Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`
+    <tr><td>${catIco(c)} ${c}</td><td style="text-align:right;color:#ef4444;font-weight:600">-R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="text-align:right;color:#6b7280">${R>0?(v/R*100).toFixed(1)+'%':'-'}</td></tr>`).join('');
+  // Top 5 lançamentos
+  const top5=txsCache.filter(t=>t.val<0).sort((a,b)=>a.val-b.val).slice(0,5);
+  const corScore=score>=80?'#10b981':score>=60?'#f59e0b':score>=40?'#f97316':'#ef4444';
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;color:#0f0f23;background:#fff;padding:40px;max-width:760px;margin:0 auto}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;padding-bottom:16px;border-bottom:2px solid #eef0f6}
+    .logo{font-size:22px;font-weight:800;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .mes{font-size:13px;color:#6b7280}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .kpi{padding:14px;border-radius:12px;border:1px solid #eef0f6}
+    .kpi-l{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+    .kpi-v{font-size:18px;font-weight:800}
+    .score-box{background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;border-radius:14px;padding:20px;margin-bottom:24px;display:flex;align-items:center;gap:20px}
+    .score-num{font-size:48px;font-weight:800;color:${corScore};min-width:80px;text-align:center}
+    .score-bar{flex:1}
+    .score-bar-item{margin-bottom:8px}
+    .score-bar-label{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.7);margin-bottom:3px}
+    .score-bar-track{height:5px;background:rgba(255,255,255,.15);border-radius:100px;overflow:hidden}
+    .score-bar-fill{height:100%;border-radius:100px}
+    h2{font-size:14px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #eef0f6}
+    table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px}
+    th{text-align:left;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;padding:6px 8px;border-bottom:2px solid #eef0f6}
+    td{padding:8px;border-bottom:1px solid #f3f4f6}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eef0f6;font-size:11px;color:#9ca3af;text-align:center}
+  </style></head><body>
+  <div class="header">
+    <div><div class="logo">💰 Financy</div><div class="mes">Relatório de ${mesLabelCap}</div></div>
+    <div style="font-size:12px;color:#9ca3af">Gerado em ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">Receitas</div><div class="kpi-v" style="color:#10b981">R$ ${R.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+    <div class="kpi"><div class="kpi-l">Despesas</div><div class="kpi-v" style="color:#ef4444">R$ ${D.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+    <div class="kpi"><div class="kpi-l">Saldo livre</div><div class="kpi-v" style="color:${S>=0?'#10b981':'#ef4444'}">${S>=0?'+':''}R$ ${Math.abs(S).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+    <div class="kpi"><div class="kpi-l">Guardado</div><div class="kpi-v" style="color:#3b82f6">R$ ${(I+CX).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+  </div>
+  <div class="score-box">
+    <div><div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Score de Saúde</div><div class="score-num">${score}</div><div style="font-size:12px;color:rgba(255,255,255,.6);text-align:center">/100</div></div>
+    <div class="score-bar">${criterios.map(c=>`<div class="score-bar-item"><div class="score-bar-label"><span>${c.nome}</span><span>${c.pts}/${c.max} pts</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.round(c.pts/c.max*100)}%;background:${corScore}"></div></div></div>`).join('')}</div>
+  </div>
+  <h2>Despesas por categoria</h2>
+  <table><thead><tr><th>Categoria</th><th style="text-align:right">Valor</th><th style="text-align:right">% da renda</th></tr></thead><tbody>${catRows||'<tr><td colspan="3" style="color:#9ca3af;text-align:center">Sem despesas</td></tr>'}</tbody></table>
+  <h2>Top 5 maiores gastos do mês</h2>
+  <table><thead><tr><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead><tbody>
+    ${top5.map(t=>`<tr><td>${t.desc}</td><td>${catIco(t.cat)} ${t.cat}</td><td style="text-align:right;color:#ef4444;font-weight:600">-R$ ${Math.abs(t.val).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>`).join('')}
+  </tbody></table>
+  <div class="footer">Financy · Relatório gerado automaticamente · Dados de ${mesLabelCap}</div>
+  </body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`financy_${mesKey()}.html`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Relatório exportado! Abra o arquivo e use Ctrl+P para imprimir/salvar como PDF 📄');
 };
 
 // ── INIT ──
